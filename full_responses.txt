@@ -1,0 +1,150 @@
+
+--- 代理: 60.248.6.250:43 ---
+检查结果:
+STDOUT: {
+  "success": true,
+  "proxyIP": "60.248.6.250",
+  "portRemote": 43,
+  "colo": "AMS",
+  "responseTime": 435,
+  "message": "第1次验证有效ProxyIP",
+  "timestamp": "2025-10-20T01:35:02.427Z"
+}
+STDERR: 
+Return Code: 0
+
+
+--- 代理: 125.227.162.252:12486 ---
+检查结果:
+STDOUT: {
+  "success": true,
+  "proxyIP": "125.227.162.252",
+  "portRemote": 12486,
+  "colo": "AMS",
+  "responseTime": 495,
+  "message": "第1次验证有效ProxyIP",
+  "timestamp": "2025-10-20T01:35:02.552Z"
+}
+STDERR: 
+Return Code: 0
+
+
+--- 代理: 61.220.128.226:43 ---
+检查结果:
+STDOUT: {
+  "success": true,
+  "proxyIP": "61.220.128.226",
+  "portRemote": 43,
+  "colo": "AMS",
+  "responseTime": 545,
+  "message": "第1次验证有效ProxyIP",
+  "timestamp": "2025-10-20T01:35:02.578Z"
+}
+STDERR: 
+Return Code: 0
+
+
+--- 代理: 114.32.9.249:51443 ---
+检查结果:
+STDOUT: {
+  "success": true,
+  "proxyIP": "114.32.9.249",
+  "portRemote": 51443,
+  "colo": "AMS",
+  "responseTime": 524,
+  "message": "第1次验证有效ProxyIP",
+  "timestamp": "2025-10-20T01:35:02.613Z"
+}
+STDERR: 
+Return Code: 0
+
+
+--- 代理: 114.44.54.22:20073 ---
+检查结果:
+STDOUT: {
+  "success": true,
+  "proxyIP": "114.44.54.22",
+  "portRemote": 20073,
+  "colo": "AMS",
+  "responseTime": 493,
+  "message": "第1次验证有效ProxyIP",
+  "timestamp": "2025-10-20T01:35:02.624Z"
+}
+STDERR: 
+Return Code: 0
+
+
+--- 代理: 220.135.84.4:12020 ---
+检查结果:
+STDOUT: {
+  "success": true,
+  "proxyIP": "220.135.84.4",
+  "portRemote": 12020,
+  "colo": "AMS",
+  "responseTime": 500,
+  "message": "第1次验证有效ProxyIP",
+  "timestamp": "2025-10-20T01:35:02.623Z"
+}
+STDERR: 
+Return Code: 0
+
+
+--- 代理: 125.227.162.252:12485 ---
+检查结果:
+STDOUT: {
+  "success": true,
+  "proxyIP": "125.227.162.252",
+  "portRemote": 12485,
+  "colo": "AMS",
+  "responseTime": 499,
+  "message": "第1次验证有效ProxyIP",
+  "timestamp": "2025-10-20T01:35:02.657Z"
+}
+STDERR: 
+Return Code: 0
+
+
+--- 代理: 220.128.110.108:43 ---
+检查结果:
+STDOUT: {
+  "success": true,
+  "proxyIP": "220.128.110.108",
+  "portRemote": 43,
+  "colo": "AMS",
+  "responseTime": 511,
+  "message": "第1次验证有效ProxyIP",
+  "timestamp": "2025-10-20T01:35:02.700Z"
+}
+STDERR: 
+Return Code: 0
+
+
+--- 代理: 114.34.202.224:10004 ---
+检查结果:
+STDOUT: {
+  "success": true,
+  "proxyIP": "114.34.202.224",
+  "portRemote": 10004,
+  "colo": "AMS",
+  "responseTime": 558,
+  "message": "第1次验证有效ProxyIP",
+  "timestamp": "2025-10-20T01:35:02.831Z"
+}
+STDERR: 
+Return Code: 0
+
+
+--- 代理: -1:-1 ---
+检查结果:
+STDOUT: {
+  "success": false,
+  "proxyIP": -1,
+  "portRemote": -1,
+  "colo": "AMS",
+  "responseTime": -1,
+  "message": "Cannot call releaseLock() on a reader with outstanding read promises.",
+  "timestamp": "2025-10-20T01:35:06.452Z"
+}
+STDERR: 
+Return Code: 0
+
