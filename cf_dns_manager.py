@@ -4,7 +4,7 @@ Cloudflare DNS记录交互式管理工具（专为三级域名优化）
 功能：查询域名DNS记录、根据IP删除DNS记录、添加DNS记录
 作者：根据用户需求编写
 日期：2025-10-04
-版本：v2.2
+版本：v2.3
 """
 
 import requests
@@ -471,22 +471,77 @@ class DNSManager:
         
         self.print_status(f"找到 {len(matching_records)} 条包含 '{subdomain_pattern}' 的DNS记录", "success")
         return matching_records
-    
-    def delete_dns_record_by_ip(self, ip: str, target_domain: str = None) -> int:
+
+    def delete_all_records_for_subdomain(self, zone_id: str, subdomain: str) -> int:
         """
-        根据IP地址删除DNS记录（跨域名）
+        删除指定子域名的所有DNS记录
         
         Args:
-            ip: 要删除的IP地址
-            target_domain: 限制删除的域名（可选）
+            zone_id: 域名区域ID
+            subdomain: 子域名（完整域名，如 se.proxyip.example.com）
             
         Returns:
             删除的记录数量
         """
-        self.print_section(f"删除IP为 {ip} 的DNS记录（所有域名）")
+        self.print_section(f"删除子域名 {subdomain} 的所有DNS记录")
         
-        # 获取所有记录
-        all_records = self.get_all_dns_records_across_zones(target_domain)
+        # 获取该子域名的所有记录
+        records = self.get_dns_records(zone_id, subdomain)
+        if not records:
+            self.print_status(f"没有找到子域名 {subdomain} 的DNS记录", "warning")
+            return 0
+        
+        # 显示要删除的记录
+        print(f"\n🔍 找到 {len(records)} 条子域名 {subdomain} 的DNS记录:")
+        self.display_records_table(records)
+        
+        # 确认删除
+        confirm = input(f"\n⚠️  确定要删除子域名 {subdomain} 的所有 {len(records)} 条记录吗？(y/N): ").strip().lower()
+        if confirm != 'y':
+            self.print_status("取消删除操作", "info")
+            return 0
+        
+        # 执行删除
+        deleted_count = 0
+        for record in records:
+            record_id = record.get('id')
+            record_name = record.get('name')
+            record_content = record.get('content')
+            
+            if self._delete_single_record(zone_id, record_id, record_content):
+                deleted_count += 1
+                self.print_status(f"已删除记录: {record_name} -> {record_content}", "success")
+            else:
+                self.print_status(f"删除记录失败: {record_name} -> {record_content}", "error")
+            
+            # 短暂延迟避免API限制
+            import time
+            time.sleep(0.5)
+        
+        self.print_status(f"删除完成，共删除 {deleted_count} 条记录", "success")
+        return deleted_count
+    
+    def delete_dns_record_by_ip(self, ip: str, target_domain: str = None, zone_id: str = None) -> int:
+        """
+        根据IP地址删除DNS记录
+        
+        Args:
+            ip: 要删除的IP地址
+            target_domain: 限制删除的域名（可选）
+            zone_id: 限制删除的域名区域ID（可选）
+            
+        Returns:
+            删除的记录数量
+        """
+        if zone_id:
+            # 在指定域名中删除
+            self.print_section(f"删除IP为 {ip} 的DNS记录（指定域名）")
+            all_records = self.get_dns_records(zone_id, target_domain)
+        else:
+            # 在所有域名中删除
+            self.print_section(f"删除IP为 {ip} 的DNS记录（所有域名）")
+            all_records = self.get_all_dns_records_across_zones(target_domain)
+        
         if not all_records:
             return 0
         
@@ -515,12 +570,12 @@ class DNSManager:
         # 执行删除
         deleted_count = 0
         for record in matching_records:
-            zone_id = record.get('zone_id')
+            record_zone_id = record.get('zone_id')
             record_id = record.get('id')
             record_name = record.get('name')
             record_content = record.get('content')
             
-            if self._delete_single_record(zone_id, record_id, record_content):
+            if self._delete_single_record(record_zone_id, record_id, record_content):
                 deleted_count += 1
                 self.print_status(f"已删除记录: {record_name} -> {record_content}", "success")
             else:
@@ -791,11 +846,11 @@ def clear_screen():
 def print_menu():
     """打印主菜单"""
     print("\n" + "=" * 60)
-    print("🌐 Cloudflare DNS记录管理工具 v2.2（三级域名优化）")
+    print("🌐 Cloudflare DNS记录管理工具 v2.3（三级域名优化）")
     print("=" * 60)
     print("1. 📋 查询域名DNS记录")
     print("2. ➕ 添加DNS记录")
-    print("3. 🗑️  根据IP删除DNS记录（所有域名）")
+    print("3. 🗑️  根据IP删除DNS记录")
     print("4. ⚙️  配置认证信息")
     print("5. 🚪 退出")
     print("=" * 60)
@@ -806,8 +861,9 @@ def print_zone_submenu():
     print("📋 域名DNS记录操作")
     print("-" * 50)
     print("1. 🔍 查询子域名DNS记录")
-    print("2. 🌐 查询该域名所有DNS记录")
-    print("3. ↩️  返回主菜单")
+    print("2. 🗑️  删除某个子域名所有记录")
+    print("3. 🌐 查询该域名所有DNS记录")
+    print("4. ↩️  返回主菜单")
     print("-" * 50)
 
 def setup_authentication():
@@ -910,7 +966,7 @@ def main():
                     manager.print_banner(f"域名: {zone_name}")
                     print_zone_submenu()
                     
-                    sub_choice = input("\n请选择操作 (1-3): ").strip()
+                    sub_choice = input("\n请选择操作 (1-4): ").strip()
                     
                     if sub_choice == '1':
                         clear_screen()
@@ -939,6 +995,28 @@ def main():
                             
                     elif sub_choice == '2':
                         clear_screen()
+                        manager.print_banner(f"删除子域名所有记录 - {zone_name}")
+                        
+                        subdomain = input("请输入要删除的完整子域名 (如 se.proxyip.example.com): ").strip()
+                        if not subdomain:
+                            manager.print_status("子域名不能为空", "error")
+                            input("\n按回车键继续...")
+                            continue
+                        
+                        # 确认子域名属于当前域名
+                        if not subdomain.endswith(zone_name):
+                            manager.print_status(f"警告：子域名 {subdomain} 不属于当前域名 {zone_name}", "warning")
+                            confirm = input("仍然继续删除？(y/N): ").strip().lower()
+                            if confirm != 'y':
+                                continue
+                        
+                        manager.delete_all_records_for_subdomain(zone_id, subdomain)
+                        
+                        input("\n按回车键继续...")
+                        break
+                            
+                    elif sub_choice == '3':
+                        clear_screen()
                         manager.print_banner(f"查询所有DNS记录 - {zone_name}")
                         
                         records = manager.get_dns_records(zone_id)
@@ -955,7 +1033,7 @@ def main():
                         continue_ops = input("\n按回车键返回子菜单...")
                         break
                             
-                    elif sub_choice == '3':
+                    elif sub_choice == '4':
                         break
                     else:
                         manager.print_status("无效选择，请重新输入", "error")
@@ -1100,7 +1178,7 @@ def main():
 
         elif choice == '3':
             clear_screen()
-            manager.print_banner("根据IP删除DNS记录（所有域名）")
+            manager.print_banner("根据IP删除DNS记录")
             
             ip = input("请输入要删除的IP地址: ").strip()
             if not ip:
@@ -1109,10 +1187,38 @@ def main():
                 clear_screen()
                 continue
             
-            target_domain = input("是否限制在特定域名中删除？(输入完整域名或留空删除所有): ").strip()
-            target_domain = target_domain if target_domain else None
+            # 选择删除范围
+            print("\n🗂️  选择删除范围:")
+            print("1. 🌐 所有域名中删除")
+            print("2. 📁 指定域名中删除")
             
-            manager.delete_dns_record_by_ip(ip, target_domain)
+            scope_choice = input("\n请选择删除范围 (1-2): ").strip()
+            
+            if scope_choice == '1':
+                # 在所有域名中删除
+                target_domain = input("是否限制在特定域名中删除？(输入完整域名或留空删除所有): ").strip()
+                target_domain = target_domain if target_domain else None
+                
+                manager.delete_dns_record_by_ip(ip, target_domain)
+                
+            elif scope_choice == '2':
+                # 在指定域名中删除
+                zone_info = manager.select_zone_interactive()
+                if not zone_info:
+                    input("\n按回车键继续...")
+                    clear_screen()
+                    continue
+                    
+                zone_id = zone_info.get('id')
+                zone_name = zone_info.get('name')
+                
+                target_domain = input(f"是否限制在特定子域名中删除？(输入完整子域名或留空删除 {zone_name} 中所有): ").strip()
+                target_domain = target_domain if target_domain else None
+                
+                manager.delete_dns_record_by_ip(ip, target_domain, zone_id)
+                
+            else:
+                manager.print_status("无效选择", "error")
             
             input("\n按回车键继续...")
             clear_screen()
