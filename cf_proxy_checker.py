@@ -440,10 +440,25 @@ successful_proxies.sort(key=lambda x: x[0])
 
 # 步骤6: 保存成功代理到 {base_name}_success.txt
 try:
+    # 先按端口从小到大排，端口相同则按响应时间从小到大排
+    def get_port_and_time(proxy_entry):
+        """从代理条目中提取端口和响应时间"""
+        try:
+            ip_port_part = proxy_entry[1].split('#')[0]
+            _, port = ip_port_part.rsplit(':', 1)
+            response_time = proxy_entry[0]
+            return (int(port), response_time)
+        except (ValueError, IndexError):
+            # 如果解析失败，返回一个很大的端口和响应时间，确保排在最后
+            return (65536, 99999)
+    
+    # 按端口和响应时间排序
+    successful_proxies_sorted = sorted(successful_proxies, key=get_port_and_time)
+    
     with open(SUCCESS_PROXY_FILE, 'w', encoding='utf-8') as f:
-        for _, proxy in successful_proxies:
+        for _, proxy in successful_proxies_sorted:
             f.write(f"{proxy}\n")
-    print(f"提取了 {len(successful_proxies)} 个有效代理到 {SUCCESS_PROXY_FILE}")
+    print(f"提取了 {len(successful_proxies_sorted)} 个有效代理到 {SUCCESS_PROXY_FILE}")
 except Exception as e:
     print(f"保存 {SUCCESS_PROXY_FILE} 时发生异常: {str(e)}")
     exit(1)
@@ -488,16 +503,19 @@ try:
             if port in preferred_ports:
                 preferred_port_proxies.append((response_time, proxy))
         
+        # 按端口和响应时间排序
+        preferred_port_proxies_sorted = sorted(preferred_port_proxies, key=lambda x: get_port_and_time(x))
+        
         # 保存端口筛选后的优选代理
-        if preferred_port_proxies:
+        if preferred_port_proxies_sorted:
             with open(PREFERRED_PROXY_FILE, 'w', encoding='utf-8') as f:
-                for _, proxy in preferred_port_proxies:
+                for _, proxy in preferred_port_proxies_sorted:
                     f.write(f"{proxy}\n")
-            print(f"提取了 {len(preferred_port_proxies)} 个响应时间小于{PREFERRED_MAX_RESPONSE_TIME}ms且端口为{PREFERRED_PROXY_PORT}的优选代理到 {PREFERRED_PROXY_FILE}")
+            print(f"提取了 {len(preferred_port_proxies_sorted)} 个响应时间小于{PREFERRED_MAX_RESPONSE_TIME}ms且端口为{PREFERRED_PROXY_PORT}的优选代理到 {PREFERRED_PROXY_FILE}")
         else:
             print(f"无响应时间小于{PREFERRED_MAX_RESPONSE_TIME}ms且端口为{PREFERRED_PROXY_PORT}的优选代理。")
     else:
-        # 没有设置端口筛选，直接保存所有优选代理
+        # 没有设置端口筛选，直接保存所有优选代理（已排序）
         if preferred_proxies:
             with open(PREFERRED_PROXY_FILE, 'w', encoding='utf-8') as f:
                 for _, proxy, _ in preferred_proxies:
