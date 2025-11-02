@@ -8,6 +8,9 @@ server=="cloudflare" && asn=="3462" && is_domain=false && "CF-RAY:" && "-TPE" &&
 查询as4766韩国的反代ip
 server=="cloudflare" && asn=="4766" && is_domain=false && "CF-RAY:" && "-ICN" && port!="80" && port!="443"
 
+查询as4760香港的反代ip
+server=="cloudflare" && asn=="4760" && is_domain=false && "CF-RAY:" && "-HKG" && port!="80" && port!="443"
+
 - 国内反代IP：server=="cloudflare" && port=="80" && header="Forbidden" && country=="CN"
 - 剔除CF：asn!="13335" && asn!="209242"
 - 阿里云：server=="cloudflare" && asn=="45102"

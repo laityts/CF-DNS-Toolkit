@@ -1,5 +1,4 @@
 42.200.111.200:20106#🇭🇰HK-01
-116.49.195.225:12128#🇭🇰HK-02
 172.104.110.10:555#🇯🇵JP-01
 60.248.6.250:43#🇹🇼TW-01
 220.128.110.108:43#🇹🇼TW-02
@@ -9,13 +8,17 @@ snipaste4.speedip.eu.org:2053#snippets-1
 snipaste2.speedip.eu.org:8443#snippets-2
 snipaste1.speedip.eu.org:2096#snippets-3
 snipaste2.speedip.eu.org:2087#snippets-4
-mfa.gov.ua#乌克兰政府官网
 saas.sin.fan#MIYU维护
-cf.090227.xyz#三网自适应
 cf.877774.xyz#秋名山维护
+cf.090227.xyz#三网自适应
+store.ubi.com#Ubisoft官方
+mfa.gov.ua#乌克兰政府官网
+www.shopify.com#Shopify官方
+cloudflare-dl.byoip.top#fishcpy维护
 cf.cloudflare.182682.xyz#wetest.vip维护
 cf.0sm.com#cf.0sm.com
 fn.130519.xyz#fn.130519.xyz
 xn--b6gac.eu.org#xn--b6gac.eu.org
 cf.zhetengsha.eu.org#cf.zhetengsha.eu.org
+staticdelivery.nexusmods.com#NexusMods
 cloudflare-ip.mofashi.ltd#cloudflare-ip.mofashi.ltd

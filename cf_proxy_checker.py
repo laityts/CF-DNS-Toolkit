@@ -9,26 +9,38 @@ import threading  # 用于文件写入锁，确保线程安全
 import sys
 import select
 
-# 常量定义
-FULL_RESPONSES_FILE = 'full_responses.txt'  # 完整响应保存文件
-PROXY_FILE = 'ip.txt'  # 代理列表文件
-SUCCESS_PROXY_FILE = 'proxyip.txt'  # 成功代理保存文件
-STANDARD_PORTS_FILE = '标准端口.txt'  # CF标准端口代理保存文件
-NON_STANDARD_FILE = '非标端口.txt'  # 非CF标准端口代理保存文件
-CSV_FILE = 'data.csv'  # 重命名后的CSV文件
-IPTEST_CSV_FILE = 'ip.csv'  # iptest生成的CSV文件
-PREFERRED_PROXY_FILE = '优选反代.txt'  # 优选代理保存文件
+# 交互式获取输入文件名
+print("=" * 60)
+print("代理检查工具配置")
+print("=" * 60)
 
-# CF标准端口列表（基于Cloudflare支持的HTTP/HTTPS端口）
-STANDARD_PORTS = {
-    '80', '443', '2052', '2053', '2082', '2083', '2086', '2087', 
-    '2095', '2096', '8080', '8443', '8880'
-}
+# 获取输入文件名
+input_filename = input("请输入包含代理列表的文件名（支持.csv或.txt格式）: ").strip()
+if not input_filename:
+    print("必须输入文件名！")
+    exit(1)
+
+# 提取文件名（不含扩展名）
+base_name = os.path.splitext(input_filename)[0]
+
+# 创建输出文件夹
+output_folder = base_name
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
+    print(f"已创建输出文件夹: {output_folder}")
+
+# 根据输入文件名动态生成其他文件名（存放在输出文件夹下）
+PROXY_FILE = os.path.join(output_folder, f'{base_name}.txt')  # 代理列表文件
+SUCCESS_PROXY_FILE = os.path.join(output_folder, f'{base_name}_success.txt')  # 成功代理保存文件
+FULL_RESPONSES_FILE = os.path.join(output_folder, f'{base_name}.log')  # 完整响应保存文件
+IPTEST_CSV_FILE = os.path.join(output_folder, f'iptest_{base_name}.csv')  # iptest生成的CSV文件
+IPTEST_TXT_FILE = os.path.join(output_folder, f'iptest_{base_name}.txt')  # iptest提取的代理文件
+PREFERRED_PROXY_FILE = os.path.join(output_folder, f'{base_name}_preferred.txt')  # 优选代理保存文件
 
 # 文件写入锁，确保多线程追加文件时不混乱
 file_lock = threading.Lock()
 
-def input_with_timeout(prompt, timeout=3, default=""):
+def input_with_timeout(prompt, timeout=5, default=""):
     """
     带超时的输入函数
     :param prompt: 提示信息
@@ -73,23 +85,18 @@ def input_with_timeout(prompt, timeout=3, default=""):
             print(f"\n输入超时，使用默认值: {default}")
             return default
 
-# 交互式配置输入
-print("=" * 60)
-print("代理检查工具配置")
-print("=" * 60)
-
 # 优选国家配置
 PREFERRED_COUNTRY = input_with_timeout(
-    f"请输入优选国家（直接回车则使用所有国家，3秒后默认使用''）: ",
-    timeout=5,
+    f"请输入优选国家（直接回车则使用所有国家，10秒后默认使用''）: ",
+    timeout=10,
     default=""
 )
 
 # 优选反代最大响应时间配置
 try:
     response_time_input = input_with_timeout(
-        f"请输入优选反代的最大响应时间阈值（毫秒，3秒后默认使用350）: ",
-        timeout=3,
+        f"请输入优选反代的最大响应时间阈值（毫秒，10秒后默认使用350）: ",
+        timeout=10,
         default="350"
     )
     PREFERRED_MAX_RESPONSE_TIME = int(response_time_input)
@@ -99,12 +106,14 @@ except ValueError:
 
 # 优选反代端口配置
 PREFERRED_PROXY_PORT = input_with_timeout(
-    f"请输入优选反代端口（多个端口用逗号分隔，直接回车则使用所有端口，3秒后默认使用''）: ",
-    timeout=3,
+    f"请输入优选反代端口（多个端口用逗号分隔，直接回车则使用所有端口，10秒后默认使用''）: ",
+    timeout=10,
     default=""
 )
 
 print("\n配置完成:")
+print(f"  输入文件: {input_filename}")
+print(f"  输出文件夹: {output_folder}")
 print(f"  优选国家: '{PREFERRED_COUNTRY}'")
 print(f"  最大响应时间: {PREFERRED_MAX_RESPONSE_TIME}ms")
 print(f"  优选端口: '{PREFERRED_PROXY_PORT}'")
@@ -116,10 +125,9 @@ def cleanup_old_files():
     files_to_remove = [
         PROXY_FILE,
         SUCCESS_PROXY_FILE,
-        STANDARD_PORTS_FILE,
-        NON_STANDARD_FILE,
         FULL_RESPONSES_FILE,
         IPTEST_CSV_FILE,
+        IPTEST_TXT_FILE,
         PREFERRED_PROXY_FILE
     ]
     
@@ -134,80 +142,93 @@ def cleanup_old_files():
 # 执行清理
 cleanup_old_files()
 
-# 步骤1: 使用通配符查找并重命名 *.csv 为 data.csv
-# 只处理第一个匹配的CSV文件，如果 ip.txt 不存在
-try:
-    csv_files = glob.glob('*.csv')
-    ip_txt_exists = os.path.exists(PROXY_FILE)
-    if not ip_txt_exists and csv_files:
-        old_name = csv_files[0]
-        os.rename(old_name, CSV_FILE)
-        print(f"已将 {old_name} 重命名为 {CSV_FILE}")
-    elif not csv_files and not ip_txt_exists:
-        print("未找到CSV文件且无 ip.txt，将退出。")
-        exit(1)
-    else:
-        print("检测到现有 ip.txt 文件，将直接使用。")
-except Exception as e:
-    print(f"重命名CSV文件时发生异常: {str(e)}")
-    exit(1)
-
-# 步骤2: 从 data.csv 提取 ip 和 port 并保存到 ip.txt（如果 ip.txt 不存在）
+# 步骤1: 从输入文件提取 ip 和 port 并保存到 {base_name}.txt
 if not os.path.exists(PROXY_FILE):
     try:
-        if not os.path.exists(CSV_FILE):
-            print(f"{CSV_FILE} 不存在，无法提取代理。")
+        if not os.path.exists(input_filename):
+            print(f"{input_filename} 不存在，无法提取代理。")
             exit(1)
         
-        with open(CSV_FILE, 'r', newline='', encoding='utf-8') as csvfile:
-            reader = csv.reader(csvfile)
-            headers = next(reader, None)  # 读取表头行
-            if headers is None:
-                print("CSV文件为空。")
-                exit(1)
-            
-            # 查找列索引，支持忽略大小写
-            ip_col_idx = next((i for i, h in enumerate(headers) if h.lower() == 'ip'), -1)
-            port_col_idx = next((i for i, h in enumerate(headers) if h.lower() == 'port'), -1)
-            country_name_col_idx = next((i for i, h in enumerate(headers) if h.lower() == 'country_name'), -1)
-            
-            if ip_col_idx == -1 or port_col_idx == -1:
-                print("CSV中未找到 'ip' 和 'port' 列（忽略大小写）。")
-                exit(1)
-            
-            # 读取数据行并写入 ip.txt，使用集合去重
-            seen_proxies = set()  # 用于去重的集合
+        file_extension = os.path.splitext(input_filename)[1].lower()
+        
+        if file_extension == '.csv':
+            # 处理CSV文件
+            with open(input_filename, 'r', newline='', encoding='utf-8') as csvfile:
+                reader = csv.reader(csvfile)
+                headers = next(reader, None)  # 读取表头行
+                if headers is None:
+                    print("CSV文件为空。")
+                    exit(1)
+                
+                # 查找列索引，支持忽略大小写
+                ip_col_idx = next((i for i, h in enumerate(headers) if h.lower() == 'ip'), -1)
+                port_col_idx = next((i for i, h in enumerate(headers) if h.lower() == 'port'), -1)
+                
+                if ip_col_idx == -1 or port_col_idx == -1:
+                    print("CSV中未找到 'ip' 和 'port' 列（忽略大小写）。")
+                    exit(1)
+                
+                # 读取数据行并写入 {base_name}.txt
+                valid_count = 0
+                with open(PROXY_FILE, 'w', encoding='utf-8') as f:
+                    for row in reader:
+                        if len(row) > max(ip_col_idx, port_col_idx):
+                            ip = row[ip_col_idx].strip()
+                            port = row[port_col_idx].strip()
+                            
+                            # 直接写入，不做验证
+                            if ip and port:
+                                f.write(f"{ip} {port}\n")
+                                valid_count += 1
+                
+                if valid_count == 0:
+                    print("CSV中无IP和端口数据。")
+                    exit(1)
+                
+                print(f"已将 {valid_count} 个IPs和ports提取到 {PROXY_FILE}")
+                    
+        elif file_extension == '.txt':
+            # 处理TXT文件，假设格式为 "ip port" 或 "ip:port"
             valid_count = 0
-            with open(PROXY_FILE, 'w', encoding='utf-8') as f:
-                for row in reader:
-                    if len(row) > max(ip_col_idx, port_col_idx, country_name_col_idx):
-                        ip = row[ip_col_idx].strip()
-                        port = row[port_col_idx].strip()
-                        country = row[country_name_col_idx].strip() if country_name_col_idx != -1 else ""
-                        
-                        # 根据是否设置了优选国家来决定过滤条件
-                        if ip and port and port.isdigit():
-                            if not PREFERRED_COUNTRY or country == PREFERRED_COUNTRY:
-                                proxy_key = f"{ip}:{port}"  # 创建唯一标识符
-                                if proxy_key not in seen_proxies:  # 检查是否重复
-                                    seen_proxies.add(proxy_key)
-                                    f.write(f"{ip} {port}\n")
-                                    valid_count += 1
+            with open(input_filename, 'r', encoding='utf-8') as infile, \
+                 open(PROXY_FILE, 'w', encoding='utf-8') as outfile:
+                for line in infile:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    
+                    # 处理 "ip port" 或 "ip:port" 格式
+                    if ' ' in line:
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            ip, port = parts[0], parts[1]
+                        else:
+                            continue
+                    elif ':' in line:
+                        parts = line.split(':')
+                        if len(parts) >= 2:
+                            ip, port = parts[0], parts[1]
+                        else:
+                            continue
+                    else:
+                        continue
+                    
+                    # 直接写入，不做验证
+                    if ip and port:
+                        outfile.write(f"{ip} {port}\n")
+                        valid_count += 1
             
             if valid_count == 0:
-                if PREFERRED_COUNTRY:
-                    print(f"CSV中无优选国家 '{PREFERRED_COUNTRY}' 的有效IP和端口。")
-                else:
-                    print("CSV中无有效IP和端口。")
+                print("TXT文件中无IP和端口数据。")
                 exit(1)
             
-            duplicate_count = (len([row for row in reader if len(row) > max(ip_col_idx, port_col_idx, country_name_col_idx)]) - valid_count)
-            if PREFERRED_COUNTRY:
-                print(f"已将 {valid_count} 个优选国家 '{PREFERRED_COUNTRY}' 的有效IPs和ports提取到 {PROXY_FILE}，已去除 {duplicate_count} 个重复项")
-            else:
-                print(f"已将 {valid_count} 个所有国家的有效IPs和ports提取到 {PROXY_FILE}，已去除 {duplicate_count} 个重复项")
+            print(f"已将 {valid_count} 个IPs和ports从 {input_filename} 提取到 {PROXY_FILE}")
+        else:
+            print(f"不支持的文件格式: {file_extension}，请使用.csv或.txt文件")
+            exit(1)
+            
     except FileNotFoundError:
-        print(f"文件 {CSV_FILE} 不存在。")
+        print(f"文件 {input_filename} 不存在。")
         exit(1)
     except csv.Error as e:
         print(f"读取CSV文件时发生错误: {str(e)}")
@@ -216,11 +237,14 @@ if not os.path.exists(PROXY_FILE):
         print(f"提取代理时发生异常: {str(e)}")
         exit(1)
 
-# 新增步骤: 执行 ./iptest 并处理生成的 ip.csv
+# 步骤2: 执行 ./iptest 并处理生成的 CSV
 print("正在执行 ./iptest 命令...")
 try:
-    # 修改这里：实时显示执行过程
-    process = subprocess.Popen(['./iptest', '-tls=true'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True)
+    # 构建iptest命令
+    iptest_command = ['./iptest', '-file', PROXY_FILE, '-outfile', IPTEST_CSV_FILE, '-tls=true']
+    
+    # 执行iptest命令
+    process = subprocess.Popen(iptest_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True)
     
     # 实时读取并显示输出
     print("=" * 50)
@@ -241,11 +265,11 @@ try:
     else:
         print("./iptest 执行成功")
         
-        # 检查是否生成了 ip.csv
+        # 检查是否生成了 CSV 文件
         if os.path.exists(IPTEST_CSV_FILE):
             print(f"检测到 {IPTEST_CSV_FILE} 文件，开始提取代理信息...")
             
-            # 从 ip.csv 提取 ip 和端口，覆盖写入 ip.txt，使用集合去重
+            # 从 iptest CSV 提取 ip 和端口，保存到 iptest_{base_name}.txt
             seen_proxies = set()  # 用于去重的集合
             valid_count = 0
             with open(IPTEST_CSV_FILE, 'r', newline='', encoding='utf-8') as csvfile:
@@ -258,8 +282,8 @@ try:
                     port_col_idx = 1
                     country_col_idx = 8  # 国家在第9列（0-indexed）
                     
-                    # 清空并重新写入 ip.txt，根据优选国家过滤，并去重
-                    with open(PROXY_FILE, 'w', encoding='utf-8') as f:
+                    # 写入 iptest_{base_name}.txt，根据优选国家过滤，并去重
+                    with open(IPTEST_TXT_FILE, 'w', encoding='utf-8') as f:
                         for row in reader:
                             if len(row) > max(ip_col_idx, port_col_idx, country_col_idx):
                                 ip = row[ip_col_idx].strip()
@@ -267,7 +291,7 @@ try:
                                 country = row[country_col_idx].strip()
                                 
                                 # 根据是否设置了优选国家来决定过滤条件
-                                if ip and port and port.isdigit():
+                                if ip and port:
                                     if not PREFERRED_COUNTRY or country == PREFERRED_COUNTRY:
                                         proxy_key = f"{ip}:{port}"  # 创建唯一标识符
                                         if proxy_key not in seen_proxies:  # 检查是否重复
@@ -276,9 +300,9 @@ try:
                                             valid_count += 1
                     
                     if PREFERRED_COUNTRY:
-                        print(f"从 {IPTEST_CSV_FILE} 提取了 {valid_count} 个优选国家 '{PREFERRED_COUNTRY}' 的有效代理到 {PROXY_FILE}，已去除重复项")
+                        print(f"从 {IPTEST_CSV_FILE} 提取了 {valid_count} 个优选国家 '{PREFERRED_COUNTRY}' 的代理到 {IPTEST_TXT_FILE}")
                     else:
-                        print(f"从 {IPTEST_CSV_FILE} 提取了 {valid_count} 个所有国家的有效代理到 {PROXY_FILE}，已去除重复项")
+                        print(f"从 {IPTEST_CSV_FILE} 提取了 {valid_count} 个所有国家的代理到 {IPTEST_TXT_FILE}")
                 else:
                     print(f"{IPTEST_CSV_FILE} 文件格式不正确")
         else:
@@ -291,24 +315,26 @@ except FileNotFoundError:
 except Exception as e:
     print(f"执行 ./iptest 时发生异常: {str(e)}")
 
-# 步骤3: 读取 ip.txt 中的代理列表
+# 步骤3: 读取 iptest_{base_name}.txt 中的代理列表
 proxies = []
+proxy_source_file = IPTEST_TXT_FILE if os.path.exists(IPTEST_TXT_FILE) else PROXY_FILE
+
 try:
-    if os.path.exists(PROXY_FILE):
-        with open(PROXY_FILE, 'r', encoding='utf-8') as f:
+    if os.path.exists(proxy_source_file):
+        with open(proxy_source_file, 'r', encoding='utf-8') as f:
             proxies = [line.strip() for line in f if line.strip() and len(line.split()) == 2]
     if not proxies:
-        print(f"{PROXY_FILE} 中无有效代理，将退出。")
+        print(f"{proxy_source_file} 中无有效代理，将退出。")
         exit(1)
-    print(f"从 {PROXY_FILE} 读取了 {len(proxies)} 个代理")
+    print(f"从 {proxy_source_file} 读取了 {len(proxies)} 个代理")
 except FileNotFoundError:
-    print(f"文件 {PROXY_FILE} 不存在。")
+    print(f"文件 {proxy_source_file} 不存在。")
     exit(1)
 except Exception as e:
-    print(f"读取 {PROXY_FILE} 时发生异常: {str(e)}")
+    print(f"读取 {proxy_source_file} 时发生异常: {str(e)}")
     exit(1)
 
-# 清空完整响应文件（开始新检查）
+# 清空日志文件（开始新检查）
 try:
     with open(FULL_RESPONSES_FILE, 'w', encoding='utf-8'):
         pass
@@ -323,8 +349,6 @@ def check_proxy(ip_port):
     """
     try:
         ip, port = ip_port.split()  # 假设格式正确，否则跳过
-        if not port.isdigit():  # 优化：再次验证端口
-            raise ValueError("端口不是有效数字")
     except ValueError as e:
         with file_lock:
             try:
@@ -363,7 +387,7 @@ def check_proxy(ip_port):
     except Exception as e:
         stderr = f"异常: {str(e)}"
     
-    # 使用锁安全追加到完整响应文件
+    # 使用锁安全追加到日志文件
     with file_lock:
         try:
             with open(FULL_RESPONSES_FILE, 'a', encoding='utf-8') as full_file:
@@ -414,7 +438,7 @@ except Exception as e:
 # 按 responseTime 排序（从小到大）
 successful_proxies.sort(key=lambda x: x[0])
 
-# 步骤6: 保存成功代理到 proxyip.txt
+# 步骤6: 保存成功代理到 {base_name}_success.txt
 try:
     with open(SUCCESS_PROXY_FILE, 'w', encoding='utf-8') as f:
         for _, proxy in successful_proxies:
@@ -424,9 +448,9 @@ except Exception as e:
     print(f"保存 {SUCCESS_PROXY_FILE} 时发生异常: {str(e)}")
     exit(1)
 
-# 新增步骤: 从 proxyip.txt 提取响应时间小于设定阈值的代理到 优选反代.txt
+# 步骤7: 从成功代理中提取优选代理到 {base_name}_preferred.txt
 try:
-    # 清空优选反代.txt文件
+    # 清空优选代理文件
     with open(PREFERRED_PROXY_FILE, 'w', encoding='utf-8') as f:
         pass
     
@@ -485,59 +509,6 @@ try:
 except Exception as e:
     print(f"提取优选代理时发生异常: {str(e)}")
 
-# 步骤7: 从 proxyip.txt 分离标准端口和非标准端口代理，并进行排序
-try:
-    standard_proxies = []
-    non_standard_proxies = []
-    
-    if os.path.exists(SUCCESS_PROXY_FILE):
-        with open(SUCCESS_PROXY_FILE, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    ip_port_part = line.split('#')[0]
-                    _, port = ip_port_part.rsplit(':', 1)
-                    response_time = int(line.split('#')[1].replace('ms', ''))  # 提取响应时间
-                    
-                    if port in STANDARD_PORTS:
-                        standard_proxies.append((port, response_time, line))
-                    else:
-                        non_standard_proxies.append((port, response_time, line))
-                except ValueError:
-                    print(f"无效行格式: {line}")
-                    continue
-    
-    # 对标准端口代理排序：先按端口号（数字），再按响应时间
-    standard_proxies.sort(key=lambda x: (int(x[0]), x[1]))
-    
-    # 对非标准端口代理排序：先按端口号（数字），再按响应时间
-    non_standard_proxies.sort(key=lambda x: (int(x[0]), x[1]))
-    
-    # 保存标准端口代理
-    if standard_proxies:
-        with open(STANDARD_PORTS_FILE, 'w', encoding='utf-8') as f:
-            for _, _, proxy in standard_proxies:
-                f.write(f"{proxy}\n")
-        print(f"提取了 {len(standard_proxies)} 个CF标准端口代理到 {STANDARD_PORTS_FILE}（已按端口和响应时间排序）")
-    else:
-        print(f"无CF标准端口代理。")
-    
-    # 保存非标准端口代理
-    if non_standard_proxies:
-        with open(NON_STANDARD_FILE, 'w', encoding='utf-8') as f:
-            for _, _, proxy in non_standard_proxies:
-                f.write(f"{proxy}\n")
-        print(f"提取了 {len(non_standard_proxies)} 个非CF标准端口代理到 {NON_STANDARD_FILE}（已按端口和响应时间排序）")
-    else:
-        print(f"无非CF标准端口代理。")
-        
-except FileNotFoundError:
-    print(f"文件 {SUCCESS_PROXY_FILE} 不存在。")
-except Exception as e:
-    print(f"分离端口类型代理时发生异常: {str(e)}")
-
 # 美化输出：显示成功代理列表
 print("\n" + "="*80)
 print("代理检查完成！以下是成功代理：")
@@ -567,10 +538,10 @@ elif not PREFERRED_PROXY_PORT and preferred_proxies:
             display_proxy = proxy
         print(f"  ★ {display_proxy}")
 
-# 分别显示标准端口和非标准端口代理
-if standard_proxies:
-    print("\nCF标准端口代理 (已按端口和响应时间排序):")
-    for _, _, proxy in standard_proxies:
+# 显示所有成功代理
+if successful_proxies:
+    print(f"\n所有成功代理 (共 {len(successful_proxies)} 个):")
+    for _, proxy in successful_proxies:
         parts = proxy.split('#')
         if len(parts) >= 2:
             ip_port = parts[0]
@@ -580,18 +551,6 @@ if standard_proxies:
             display_proxy = proxy
         print(f"  ✓ {display_proxy}")
 
-if non_standard_proxies:
-    print("\n非CF标准端口代理 (已按端口和响应时间排序):")
-    for _, _, proxy in non_standard_proxies:
-        parts = proxy.split('#')
-        if len(parts) >= 2:
-            ip_port = parts[0]
-            status = parts[1]
-            display_proxy = f"{ip_port} ({status})"
-        else:
-            display_proxy = proxy
-        print(f"  ⚠ {display_proxy}")
-
 print("="*80)
 print(f"总共保存 {len(successful_proxies)} 个成功代理到 {SUCCESS_PROXY_FILE}")
 
@@ -600,7 +559,5 @@ if PREFERRED_PROXY_PORT:
 else:
     print(f"优选代理 (响应时间 < {PREFERRED_MAX_RESPONSE_TIME}ms): {len(preferred_proxies)} 个 -> {PREFERRED_PROXY_FILE}")
 
-print(f"CF标准端口代理: {len(standard_proxies)} 个 -> {STANDARD_PORTS_FILE}")
-print(f"非CF标准端口代理: {len(non_standard_proxies)} 个 -> {NON_STANDARD_FILE}")
 print(f"完整curl响应（所有代理）已保存到 {FULL_RESPONSES_FILE}")
 print("="*80)
