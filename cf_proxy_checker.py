@@ -160,9 +160,27 @@ if not os.path.exists(PROXY_FILE):
                     print("CSV文件为空。")
                     exit(1)
                 
-                # 查找列索引，支持忽略大小写
-                ip_col_idx = next((i for i, h in enumerate(headers) if h.lower() == 'ip'), -1)
-                port_col_idx = next((i for i, h in enumerate(headers) if h.lower() == 'port'), -1)
+                # 查找列索引，支持多种中英文列名格式
+                ip_col_idx = -1
+                port_col_idx = -1
+                
+                for i, header in enumerate(headers):
+                    header_lower = header.lower().strip()
+                    
+                    # 匹配IP相关列名
+                    if header_lower in ['ip', 'ip地址', 'ip 地址', 'ip address', 'ip_address']:
+                        ip_col_idx = i
+                    # 匹配端口相关列名  
+                    elif header_lower in ['port', '端口', '端口号']:
+                        port_col_idx = i
+                
+                # 如果没找到标准列名，尝试使用前两列作为默认
+                if ip_col_idx == -1 and len(headers) > 0:
+                    ip_col_idx = 0
+                    print(f"未找到IP列，使用第一列 '{headers[0]}' 作为IP地址")
+                if port_col_idx == -1 and len(headers) > 1:
+                    port_col_idx = 1
+                    print(f"未找到端口列，使用第二列 '{headers[1]}' 作为端口")
                 
                 if ip_col_idx == -1 or port_col_idx == -1:
                     print("CSV中未找到 'ip' 和 'port' 列（忽略大小写）。")
