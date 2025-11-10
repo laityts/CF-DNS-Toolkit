@@ -377,7 +377,7 @@ def check_proxy(ip_port):
                 print(f"写入 {FULL_RESPONSES_FILE} 时发生异常: {str(write_e)}")
         return None
     
-    url = f"https://check.proxyip.eytan.qzz.io/check?proxyip={ip}:{port}"
+    url = f"https://check.proxyip.eytan.netlib.re/check?proxyip={ip}:{port}"
     header = f"{ip}:{port}"
     stdout = ""
     stderr = ""
