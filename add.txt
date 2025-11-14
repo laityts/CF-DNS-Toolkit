@@ -21,7 +21,11 @@ cloudflare-dl.byoip.top#fishcpy维护
 cf.cloudflare.182682.xyz#wetest.vip维护
 cf.0sm.com#cf.0sm.com
 fn.130519.xyz#fn.130519.xyz
+nrtcfdns.zone.id#nrtcfdns.zone.id
+cdns.doon.eu.org#cdns.doon.eu.org
 xn--b6gac.eu.org#xn--b6gac.eu.org
+nrt.xxxxxxxx.nyc.mn#nrt.xxxxxxxx.nyc.mn
 cf.zhetengsha.eu.org#cf.zhetengsha.eu.org
 staticdelivery.nexusmods.com#NexusMods
 cloudflare-ip.mofashi.ltd#cloudflare-ip.mofashi.ltd
+freeyx.cloudflare88.eu.org#freeyx.cloudflare88.eu.org
