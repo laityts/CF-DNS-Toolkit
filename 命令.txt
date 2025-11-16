@@ -11,6 +11,8 @@ server=="cloudflare" && asn=="4766" && is_domain=false && "CF-RAY:" && "-ICN" &&
 查询as4760香港的反代ip
 server=="cloudflare" && asn=="4760" && is_domain=false && "CF-RAY:" && "-HKG" && port!="80" && port!="443"
 
+server=="cloudflare" && asn=="4766" && is_domain=false && "CF-RAY:" && "-ICN" && title=="403 Forbidden" && country="KR" && after="2025-04-30"
+
 - 国内反代IP：server=="cloudflare" && port=="80" && header="Forbidden" && country=="CN"
 - 剔除CF：asn!="13335" && asn!="209242"
 - 阿里云：server=="cloudflare" && asn=="45102"
