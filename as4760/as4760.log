@@ -1,19 +1,4 @@
 
---- 代理: 203.218.107.90:33890 ---
-检查结果:
-STDOUT: {
-  "success": true,
-  "proxyIP": "203.218.107.90",
-  "portRemote": 33890,
-  "colo": "AMS",
-  "responseTime": 389,
-  "message": "第1次验证有效ProxyIP",
-  "timestamp": "2025-11-02T21:16:04.515Z"
-}
-STDERR: 
-Return Code: 0
-
-
 --- 代理: 58.153.155.98:12345 ---
 检查结果:
 STDOUT: {
@@ -21,9 +6,24 @@ STDOUT: {
   "proxyIP": "58.153.155.98",
   "portRemote": 12345,
   "colo": "AMS",
-  "responseTime": 391,
+  "responseTime": 399,
   "message": "第1次验证有效ProxyIP",
-  "timestamp": "2025-11-02T21:16:04.493Z"
+  "timestamp": "2025-11-16T18:41:02.167Z"
+}
+STDERR: 
+Return Code: 0
+
+
+--- 代理: 119.237.89.240:32807 ---
+检查结果:
+STDOUT: {
+  "success": true,
+  "proxyIP": "119.237.89.240",
+  "portRemote": 32807,
+  "colo": "AMS",
+  "responseTime": 420,
+  "message": "第1次验证有效ProxyIP",
+  "timestamp": "2025-11-16T18:41:02.232Z"
 }
 STDERR: 
 Return Code: 0
@@ -36,9 +36,9 @@ STDOUT: {
   "proxyIP": "1.64.178.245",
   "portRemote": 20200,
   "colo": "AMS",
-  "responseTime": 426,
+  "responseTime": 402,
   "message": "第1次验证有效ProxyIP",
-  "timestamp": "2025-11-02T21:16:04.768Z"
+  "timestamp": "2025-11-16T18:41:03.323Z"
 }
 STDERR: 
 Return Code: 0
